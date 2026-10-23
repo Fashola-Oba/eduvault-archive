@@ -72,6 +72,9 @@ export const COLLECTIONS = {
   // Pending-acceptance material ownership transfers. See
   // src/lib/ownership/ownershipTransfer.js.
   ownershipTransfers: "ownership_transfers",
+  // Migration / deployment runs and their rollback verification evidence. See
+  // src/lib/migrations/rollbackVerification.js.
+  rollbackVerifications: "rollback_verifications",
 };
 
 export const REQUIRED_INDEXES = {
@@ -233,6 +236,19 @@ export const REQUIRED_INDEXES = {
     { keys: { toAddress: 1, createdAt: -1 }, options: { name: "ownership_transfers_to_idx" } },
     // Drives the expiry / stuck-accept sweep.
     { keys: { state: 1, expiresAt: 1 }, options: { name: "ownership_transfers_sweep_idx" } },
+  ],
+  rollback_verifications: [
+    // One unresolved run per name: a second start while a run is applying,
+    // rolling back, or awaiting repair fails instead of stacking changes.
+    {
+      keys: { name: 1 },
+      options: {
+        name: "rollback_verifications_one_unresolved_per_name_idx",
+        unique: true,
+        partialFilterExpression: { state: { $in: ["applying", "rolling_back", "rollback_failed", "rollback_drift", "unverifiable"] } },
+      },
+    },
+    { keys: { name: 1, startedAt: -1 }, options: { name: "rollback_verifications_name_started_idx" } },
   ],
   saved_materials: [
     { keys: { walletAddress: 1, savedAt: -1 } },

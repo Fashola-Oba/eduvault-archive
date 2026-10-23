@@ -69,6 +69,9 @@ export const COLLECTIONS = {
   // See src/lib/auth/identityLinks.js.
   identityLinks: "identity_links",
   identityLinkChallenges: "identity_link_challenges",
+  // Pending-acceptance material ownership transfers. See
+  // src/lib/ownership/ownershipTransfer.js.
+  ownershipTransfers: "ownership_transfers",
 };
 
 export const REQUIRED_INDEXES = {
@@ -214,6 +217,22 @@ export const REQUIRED_INDEXES = {
   material_history: [
     { keys: { materialId: 1, updatedAt: -1 } },
     { keys: { updatedBy: 1 } },
+  ],
+  ownership_transfers: [
+    // At most one live (pending or accepting) transfer per material; a
+    // concurrent second proposal fails instead of creating a competing offer.
+    {
+      keys: { materialId: 1 },
+      options: {
+        name: "ownership_transfers_one_live_per_material_idx",
+        unique: true,
+        partialFilterExpression: { state: { $in: ["pending", "accepting"] } },
+      },
+    },
+    { keys: { fromAddress: 1, createdAt: -1 }, options: { name: "ownership_transfers_from_idx" } },
+    { keys: { toAddress: 1, createdAt: -1 }, options: { name: "ownership_transfers_to_idx" } },
+    // Drives the expiry / stuck-accept sweep.
+    { keys: { state: 1, expiresAt: 1 }, options: { name: "ownership_transfers_sweep_idx" } },
   ],
   saved_materials: [
     { keys: { walletAddress: 1, savedAt: -1 } },
